@@ -47,13 +47,20 @@ def _create_history():
 def load_history() -> pd.DataFrame:
     if not HIST_FILE.exists():
         _create_history()
-    df = pd.read_csv(HIST_FILE)
+    # History CSV may use commas or tabs as separators depending on how it was
+    # generated.  Use a regex separator via the Python engine so either format
+    # loads correctly.
+    df = pd.read_csv(HIST_FILE, sep=r"[,\t]", engine="python")
+
     # Drop any stray header rows or bad data then parse types
     df = df[df["date"] != "date"]
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["balance"] = pd.to_numeric(df["balance"], errors="coerce")
+
+    # Remove rows with invalid dates or balance values and index by date
     df = df.dropna(subset=["date", "balance"]).set_index("date")
-    return df
+
+    return df.sort_index()
 
 ###############################################################################
 #  Binance helpers
