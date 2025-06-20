@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "name": "kind",
+    "virtual": false,
+    "balance": 0.0,
+    "api_key": "sdg",
+    "api_secret": "gh",
+    "error": "There is no current event loop in thread 'ScriptRunner.scriptThread'."
+  }
+]
