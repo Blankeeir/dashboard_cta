@@ -86,7 +86,7 @@ today_row = pd.Series(
     index=[pd.Timestamp.utcnow().normalize().tz_localize(None)]
 )
 equity_series = history_df["balance"].copy()
-equity_series = equity_series.combine_first(today_row)
+equity_series = equity_series.combine_first(today_row).sort_index()
 
 # Returns
 periods = {"30 d": 30, "90 d": 90, "180 d": 180, "Overall": len(equity_series) - 1}
