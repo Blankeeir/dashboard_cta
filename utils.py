@@ -47,7 +47,10 @@ def _create_history():
 def load_history() -> pd.DataFrame:
     if not HIST_FILE.exists():
         _create_history()
-    return pd.read_csv(HIST_FILE, parse_dates=["date"], index_col="date")
+    df = pd.read_csv(HIST_FILE, parse_dates=["date"], index_col="date")
+    # ensure numeric balance for calculations
+    df["balance"] = pd.to_numeric(df["balance"], errors="coerce")
+    return df
 
 ###############################################################################
 #  Binance helpers
