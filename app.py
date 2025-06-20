@@ -71,11 +71,9 @@ total_aum = total_real + total_virtual
 #  Overview boxes
 ###############################################################################
 st.subheader("Assets under Management")
-col1, col2, col3 = st.columns(3)
+col1 = st.columns(1)[0]
 
 col1.metric("**Total Capital (USD)**", f"${total_aum:,.0f}")
-col2.metric("Real Capital", f"${total_real:,.0f}")
-col3.metric("Virtual Capital", f"${total_virtual:,.0f}")
 
 ###############################################################################
 #  Performance section
@@ -111,9 +109,11 @@ st.line_chart(equity_series.rename("Equity (USD)"))
 st.subheader("LP Accounts")
 inv_df = pd.DataFrame(investors)
 if not inv_df.empty:
-    inv_df_display = inv_df[["name", "balance", "virtual"]].rename(columns={"name": "Investor", "balance": "Balance (USD)", "virtual": "Virtual"})
+    inv_df_display = inv_df[["name", "balance"]].rename(
+        columns={"name": "Investor", "balance": "Balance (USD)"}
+    )
 else:
-    inv_df_display = pd.DataFrame(columns=["Investor", "Balance (USD)", "Virtual"])
+    inv_df_display = pd.DataFrame(columns=["Investor", "Balance (USD)"])
 st.dataframe(inv_df_display, hide_index=True)
 
 ###############################################################################
