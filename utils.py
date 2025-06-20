@@ -47,9 +47,12 @@ def _create_history():
 def load_history() -> pd.DataFrame:
     if not HIST_FILE.exists():
         _create_history()
-    df = pd.read_csv(HIST_FILE, parse_dates=["date"], index_col="date")
-    # ensure numeric balance for calculations
+    df = pd.read_csv(HIST_FILE)
+    # Drop any stray header rows or bad data then parse types
+    df = df[df["date"] != "date"]
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["balance"] = pd.to_numeric(df["balance"], errors="coerce")
+    df = df.dropna(subset=["date", "balance"]).set_index("date")
     return df
 
 ###############################################################################
