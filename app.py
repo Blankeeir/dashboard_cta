@@ -85,7 +85,7 @@ st.subheader("Performance Metrics")
 # Append today's real equity to history (for live numbers)
 today_row = pd.Series(
     total_real if total_real > 0 else np.nan,
-    index=[pd.Timestamp.utcnow().normalize()]
+    index=[pd.Timestamp.utcnow().normalize().tz_localize(None)]
 )
 equity_series = history_df["balance"].copy()
 equity_series = equity_series.combine_first(today_row)
@@ -109,11 +109,11 @@ st.line_chart(equity_series.rename("Equity (USD)"))
 #  Investor table
 ###############################################################################
 st.subheader("LP Accounts")
-
 inv_df = pd.DataFrame(investors)
-inv_df_display = inv_df[["name", "balance", "virtual"]].rename(
-    columns={"name": "Investor", "balance": "Balance (USD)", "virtual": "Virtual"}
-)
+if not inv_df.empty:
+    inv_df_display = inv_df[["name", "balance", "virtual"]].rename(columns={"name": "Investor", "balance": "Balance (USD)", "virtual": "Virtual"})
+else:
+    inv_df_display = pd.DataFrame(columns=["Investor", "Balance (USD)", "Virtual"])
 st.dataframe(inv_df_display, hide_index=True)
 
 ###############################################################################
