@@ -29,7 +29,7 @@ def save_investors(investors: list[dict]) -> None:
 #  Synthetic history (100 % CAGR, ≤4.5 % max DD) – created once
 ###############################################################################
 def _create_history():
-    start = datetime.utcnow() - timedelta(days=730)
+    start = datetime.utcnow() - timedelta(days=547)
     dates = pd.date_range(start=start, end=datetime.utcnow(), freq="D")
     growth = np.power(2, np.arange(len(dates)) / 365)  # 100 % p.a.
     noise = np.random.normal(1.0, 0.002, size=len(dates))  # tiny day noise
