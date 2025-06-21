@@ -244,15 +244,23 @@ st.markdown("## 📊 Assets Under Management")
 
 aum_col1, aum_col2, aum_col3 = st.columns([1, 2, 1])
 with aum_col2:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Total Assets Under Management</div>
-        <div class="metric-value">${total_aum:,.0f}</div>
-        <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
-            Real: ${total_real:,.0f} | Virtual: ${total_virtual:,.0f}
+    if authenticated:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Total Assets Under Management</div>
+            <div class="metric-value">${total_aum:,.0f}</div>
+            <div style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+                Real: ${total_real:,.0f} | Virtual: ${total_virtual:,.0f}
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-title">Total Assets Under Management</div>
+            <div class="metric-value">${total_aum:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 ###############################################################################
 #  Performance section
@@ -301,18 +309,28 @@ inv_df = pd.DataFrame(investors)
 if not inv_df.empty:
     display_data = []
     for inv in investors:
-        investor_type = "🔗 Real" if not inv.get("virtual", False) else "💰 Virtual"
         balance_formatted = f"${inv['balance']:,.0f}"
-        display_data.append({
-            "Investor": inv["name"],
-            "Type": investor_type,
-            "Balance (USD)": balance_formatted,
-            "Status": "✅ Active" if inv["balance"] > 0 else "⚠️ Inactive"
-        })
+        if authenticated:
+            investor_type = "🔗 Real" if not inv.get("virtual", False) else "💰 Virtual"
+            display_data.append({
+                "Investor": inv["name"],
+                "Type": investor_type,
+                "Balance (USD)": balance_formatted,
+                "Status": "✅ Active" if inv["balance"] > 0 else "⚠️ Inactive"
+            })
+        else:
+            display_data.append({
+                "Investor": inv["name"],
+                "Balance (USD)": balance_formatted,
+                "Status": "✅ Active" if inv["balance"] > 0 else "⚠️ Inactive"
+            })
     
     inv_df_display = pd.DataFrame(display_data)
 else:
-    inv_df_display = pd.DataFrame(columns=["Investor", "Type", "Balance (USD)", "Status"])
+    if authenticated:
+        inv_df_display = pd.DataFrame(columns=["Investor", "Type", "Balance (USD)", "Status"])
+    else:
+        inv_df_display = pd.DataFrame(columns=["Investor", "Balance (USD)", "Status"])
 
 st.dataframe(inv_df_display, hide_index=True, use_container_width=True)
 
