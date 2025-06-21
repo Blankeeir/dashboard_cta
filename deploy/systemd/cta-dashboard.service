@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 User=ec2-user
 WorkingDirectory=/home/ec2-user/dashboard_cta
-Environment=PATH=/home/ec2-user/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/home/ec2-user/dashboard_cta/.venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONPATH=/home/ec2-user/dashboard_cta
-ExecStart=/usr/bin/python3 -m streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+ExecStart=/home/ec2-user/dashboard_cta/.venv/bin/python -m streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
 Restart=always
 RestartSec=3
 StandardOutput=journal

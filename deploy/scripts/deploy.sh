@@ -38,15 +38,19 @@ fi
 
 cd "$APP_DIR"
 
-echo "📚 Installing Python dependencies..."
-pip3 install --user -r requirements.txt
+echo "📚 Creating virtual environment and installing dependencies..."
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
 echo "⚙️  Creating systemd service..."
 sudo cp deploy/systemd/cta-dashboard.service "$SERVICE_FILE"
 
 sudo sed -i "s|User=ec2-user|User=$USER|g" "$SERVICE_FILE"
 sudo sed -i "s|WorkingDirectory=/home/ec2-user/dashboard_cta|WorkingDirectory=$APP_DIR|g" "$SERVICE_FILE"
-sudo sed -i "s|Environment=PATH=/home/ec2-user/.local/bin|Environment=PATH=$HOME/.local/bin|g" "$SERVICE_FILE"
+sudo sed -i "s|Environment=PATH=/home/ec2-user/dashboard_cta/.venv/bin|Environment=PATH=$APP_DIR/.venv/bin|g" "$SERVICE_FILE"
+sudo sed -i "s|Environment=PYTHONPATH=/home/ec2-user/dashboard_cta|Environment=PYTHONPATH=$APP_DIR|g" "$SERVICE_FILE"
+sudo sed -i "s|ExecStart=/home/ec2-user/dashboard_cta/.venv/bin/python|ExecStart=$APP_DIR/.venv/bin/python|g" "$SERVICE_FILE"
 
 echo "🔄 Enabling and starting service..."
 sudo systemctl daemon-reload
