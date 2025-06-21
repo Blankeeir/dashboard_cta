@@ -277,7 +277,7 @@ equity_series = equity_series.combine_first(today_row).sort_index()
 # Returns
 periods = {"30 d": 30, "90 d": 90, "180 d": 180, "Overall": len(equity_series) - 1}
 st.markdown("### 📅 Performance Period Selection")
-sel = st.radio("", list(periods.keys()), horizontal=True, label_visibility="collapsed")
+sel = st.radio("Performance Period", list(periods.keys()), horizontal=True, label_visibility="collapsed")
 
 ret = window_return(equity_series, periods[sel])
 dd = max_drawdown(equity_series)
