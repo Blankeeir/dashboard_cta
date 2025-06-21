@@ -5,6 +5,19 @@
     "balance": 0.0,
     "api_key": "sdg",
     "api_secret": "gh",
-    "error": "There is no current event loop in thread 'ScriptRunner.scriptThread'."
+    "error": "APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
+  },
+  {
+    "name": "VirtualLP1",
+    "virtual": true,
+    "balance": 50000.0
+  },
+  {
+    "name": "RealLP1",
+    "virtual": false,
+    "balance": 0.0,
+    "api_key": "WJ7njsTdHtWgoSJ7gmyKrmHPqomy9BHMD8SbhdD7WwsCJSVhBNQozdoXE0MPugiI",
+    "api_secret": "1h2tAiCLe6J8Y5CFCUlKHp0zSDqMZcohRvpEkGpbtLoOKkkGWDECuChK0tDlzwOi",
+    "error": "APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
   }
 ]

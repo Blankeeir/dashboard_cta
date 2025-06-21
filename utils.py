@@ -26,16 +26,53 @@ def save_investors(investors: list[dict]) -> None:
     INV_FILE.write_text(json.dumps(investors, indent=2))
 
 ###############################################################################
-#  Synthetic history (100 % CAGR, ≤4.5 % max DD) – created once
 ###############################################################################
 def _create_history():
-    start = datetime.utcnow() - timedelta(days=730)
+    start = datetime.utcnow() - timedelta(days=547)
     dates = pd.date_range(start=start, end=datetime.utcnow(), freq="D")
-    growth = np.power(2, np.arange(len(dates)) / 365)  # 100 % p.a.
-    noise = np.random.normal(1.0, 0.002, size=len(dates))  # tiny day noise
-    equity = 10_000 * growth * noise.cumprod()
-
-    # Smooth drawdown to keep < 4.5 %
+    
+    equity = np.full(len(dates), 10_000.0)
+    
+    np.random.seed(42)
+    
+    for i in range(1, len(dates)):
+        days_elapsed = i
+        
+        target_growth = 10_000 * np.power(2, days_elapsed / 365)
+        
+        if i < len(dates) * 0.3:  # First period: steady growth with small drawdowns
+            daily_return = np.random.normal(0.002, 0.015)  # ~0.2% daily with 1.5% volatility
+            if np.random.random() < 0.05:  # 5% chance of larger drawdown
+                daily_return = np.random.normal(-0.02, 0.01)  # -2% drawdown
+        elif i < len(dates) * 0.6:  # Second period: more volatile with step-like growth
+            if np.random.random() < 0.1:  # 10% chance of growth spurt
+                daily_return = np.random.normal(0.015, 0.005)  # 1.5% growth spurt
+            elif np.random.random() < 0.08:  # 8% chance of drawdown
+                daily_return = np.random.normal(-0.025, 0.01)  # -2.5% drawdown
+            else:
+                daily_return = np.random.normal(0.001, 0.02)  # Normal volatility
+        else:  # Final period: strong performance with occasional setbacks
+            if np.random.random() < 0.15:  # 15% chance of strong growth
+                daily_return = np.random.normal(0.02, 0.008)  # 2% growth
+            elif np.random.random() < 0.06:  # 6% chance of drawdown
+                daily_return = np.random.normal(-0.03, 0.015)  # -3% drawdown
+            else:
+                daily_return = np.random.normal(0.003, 0.018)  # Higher baseline growth
+        
+        equity[i] = equity[i-1] * (1 + daily_return)
+        
+        current_ratio = equity[i] / target_growth
+        if current_ratio > 1.2:  # Too high, apply correction
+            equity[i] = equity[i] * 0.95
+        elif current_ratio < 0.8:  # Too low, apply boost
+            equity[i] = equity[i] * 1.05
+    
+    final_target = 10_000 * 2  # 100% return
+    final_ratio = equity[-1] / final_target
+    if abs(final_ratio - 1.0) > 0.1:  # If more than 10% off target
+        adjustment_factor = final_target / equity[-1]
+        equity = equity * adjustment_factor
+    
     roll_max = pd.Series(equity).cummax()
     drawdown = (equity - roll_max) / roll_max
     equity[drawdown < -0.045] = roll_max[drawdown < -0.045] * 0.955
