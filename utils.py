@@ -221,3 +221,32 @@ def get_performance_metrics(equity: pd.Series) -> dict:
         "avg_daily_return": daily_returns.mean() * 100,
         "avg_monthly_return": monthly_returns.mean() * 100
     }
+
+def calculate_rolling_metrics(equity: pd.Series, window: int = 30) -> dict:
+    """Calculate rolling performance metrics for curve visualization."""
+    daily_returns = calculate_daily_returns(equity)
+    
+    rolling_volatility = daily_returns.rolling(window=window).std() * np.sqrt(252) * 100
+    
+    rolling_sharpe = daily_returns.rolling(window=window).mean() / daily_returns.rolling(window=window).std() * np.sqrt(252)
+    
+    rolling_max = equity.rolling(window=window, min_periods=1).max()
+    rolling_drawdown = (equity - rolling_max) / rolling_max * 100
+    
+    rolling_win_rate = daily_returns.rolling(window=window).apply(lambda x: (x > 0).mean()) * 100
+    
+    rolling_returns = equity.pct_change(periods=window).rolling(window=1).mean() * (252/window) * 100
+    
+    return {
+        "rolling_volatility": rolling_volatility.dropna(),
+        "rolling_sharpe": rolling_sharpe.dropna(),
+        "rolling_drawdown": rolling_drawdown.dropna(),
+        "rolling_win_rate": rolling_win_rate.dropna(),
+        "rolling_returns": rolling_returns.dropna()
+    }
+
+def calculate_cumulative_drawdown(equity: pd.Series) -> pd.Series:
+    """Calculate cumulative drawdown curve."""
+    cummax = equity.cummax()
+    drawdown = (equity - cummax) / cummax * 100
+    return drawdown

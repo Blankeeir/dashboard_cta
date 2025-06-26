@@ -10,7 +10,8 @@ from utils import (
     max_drawdown, sharpe_ratio, window_return,
     get_account_balance_sync, calculate_daily_returns,
     calculate_monthly_returns, calculate_return_rate_curve,
-    get_performance_metrics
+    get_performance_metrics, calculate_rolling_metrics,
+    calculate_cumulative_drawdown
 )
 
 ###############################################################################
@@ -301,7 +302,7 @@ pcol3.metric("Sharpe Ratio", f"{sharpe:,.2f}")
 
 st.markdown("### 📊 Advanced Analytics")
 
-chart_tab1, chart_tab2, chart_tab3 = st.tabs(["📈 Equity Curve", "📊 Return Rate Changes", "📅 Daily Returns"])
+chart_tab1, chart_tab2, chart_tab3, chart_tab4 = st.tabs(["📈 Equity Curve", "📊 Return Rate Changes", "📅 Daily Returns", "📈 Performance Metrics"])
 
 with chart_tab1:
     st.markdown("#### Total Asset Return Curve (总余额资产收益曲线)")
@@ -323,6 +324,36 @@ with chart_tab3:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.bar_chart(recent_returns.rename("Daily Return (%)"), height=400)
     st.markdown('</div>', unsafe_allow_html=True)
+
+with chart_tab4:
+    st.markdown("#### Performance Metrics Curves (性能指标曲线)")
+    
+    rolling_metrics = calculate_rolling_metrics(equity_series, window=30)
+    
+    metric_chart_col1, metric_chart_col2 = st.columns(2)
+    
+    with metric_chart_col1:
+        st.markdown("**Rolling Volatility (30-day)**")
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+        st.line_chart(rolling_metrics["rolling_volatility"].rename("Volatility (%)"), height=300)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("**Rolling Sharpe Ratio (30-day)**")
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+        st.line_chart(rolling_metrics["rolling_sharpe"].rename("Sharpe Ratio"), height=300)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with metric_chart_col2:
+        st.markdown("**Cumulative Drawdown Curve**")
+        drawdown_curve = calculate_cumulative_drawdown(equity_series)
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+        st.line_chart(drawdown_curve.rename("Drawdown (%)"), height=300)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown("**Rolling Win Rate (30-day)**")
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+        st.line_chart(rolling_metrics["rolling_win_rate"].rename("Win Rate (%)"), height=300)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("### 📋 Comprehensive Performance Metrics")
 metrics = get_performance_metrics(equity_series)
