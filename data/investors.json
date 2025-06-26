@@ -5,7 +5,7 @@
     "balance": 0.0,
     "api_key": "sdg",
     "api_secret": "gh",
-    "error": "APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
+    "error": "There is no current event loop in thread 'ScriptRunner.scriptThread'."
   },
   {
     "name": "VirtualLP1",
@@ -18,6 +18,44 @@
     "balance": 0.0,
     "api_key": "WJ7njsTdHtWgoSJ7gmyKrmHPqomy9BHMD8SbhdD7WwsCJSVhBNQozdoXE0MPugiI",
     "api_secret": "1h2tAiCLe6J8Y5CFCUlKHp0zSDqMZcohRvpEkGpbtLoOKkkGWDECuChK0tDlzwOi",
-    "error": "APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
+    "error": "There is no current event loop in thread 'ScriptRunner.scriptThread'."
+  },
+  {
+    "name": "siyi_cta_bn",
+    "virtual": false,
+    "balance": 0.0,
+    "api_key": "WJ7njsTdHtWgoSJ7gmyKrmHPqomy9BHMD8SbhdD7WwsCJSVhBNQozdoXE0MPugiI",
+    "api_secret": "1h2tAiCLe6J8Y5CFCUlKHp0zSDqMZcohRvpEkGpbtLoOKkkGWDECuChK0tDlzwOi",
+    "error": "There is no current event loop in thread 'ScriptRunner.scriptThread'."
+  },
+  {
+    "name": "neko",
+    "virtual": true,
+    "balance": 14023526.0
+  },
+  {
+    "name": "siyi_test",
+    "virtual": true,
+    "balance": 500477.0
+  },
+  {
+    "name": "siyi_test2",
+    "virtual": true,
+    "balance": 20345560.0
+  },
+  {
+    "name": "chen_zhanshuo",
+    "virtual": true,
+    "balance": 6065560.0
+  },
+  {
+    "name": "henserly",
+    "virtual": true,
+    "balance": 87997222.0
+  },
+  {
+    "name": "sunny",
+    "virtual": true,
+    "balance": 998444.0
   }
 ]

@@ -16,3 +16,19 @@ Title -> overview of asset under management(total capital) -> overview of CTA st
 The dashboard will be using python, connecting to binance's REST api.
 
 Provide full WORKING code for this dashboard and I wish to directly deploy on EC2 instance
+
+
+# Stop the failing service
+sudo systemctl stop cta-dashboard.service
+
+# Edit the service file with the corrected content above
+sudo vim /etc/systemd/system/cta-dashboard.service
+
+# Reload systemd and restart
+sudo systemctl daemon-reload
+sudo systemctl start cta-dashboard.service
+
+# Check status
+sudo systemctl status cta-dashboard.service
+
+i-03a0537eb2f2f5855=$(curl -s http://169.254.169.254/latest/meta-data/i-03a0537eb2f2f5855) && sg-07a8d0704a4469158=$(aws ec2 describe-instances --instance-ids $i-03a0537eb2f2f5855 --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text) && aws ec2 authorize-security-group-ingress --group-id $sg-07a8d0704a4469158 --protocol tcp --port 8501 --cidr 0.0.0.0/0
