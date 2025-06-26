@@ -7,8 +7,10 @@ import streamlit as st
 from binance.client import Client
 from utils import (
     load_investors, save_investors, load_history,
-    make_client, account_value_usd,
-    max_drawdown, sharpe_ratio, window_return
+    max_drawdown, sharpe_ratio, window_return,
+    get_account_balance_sync, calculate_daily_returns,
+    calculate_monthly_returns, calculate_return_rate_curve,
+    get_performance_metrics
 )
 
 ###############################################################################
@@ -223,11 +225,12 @@ for inv in investors:
         continue
 
     try:
-        client = make_client(inv["api_key"], inv["api_secret"])
-        bal = account_value_usd(client)
+        bal = get_account_balance_sync(inv["api_key"], inv["api_secret"])
         inv["balance"] = bal
         inv["last_update"] = datetime.utcnow().isoformat()
         real_balances.append(bal)
+        if "error" in inv:
+            del inv["error"]
     except Exception as e:
         inv["error"] = str(e)
         real_balances.append(0.0)
@@ -296,10 +299,50 @@ pcol1.metric(f"{sel} Return", f"{ret*100:,.2f} %")
 pcol2.metric("Max Drawdown", f"{dd*100:,.2f} %")
 pcol3.metric("Sharpe Ratio", f"{sharpe:,.2f}")
 
-st.markdown("### 📊 Equity Curve Analysis")
-st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-st.line_chart(equity_series.rename("Portfolio Value (USD)"), height=400)
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("### 📊 Advanced Analytics")
+
+chart_tab1, chart_tab2, chart_tab3 = st.tabs(["📈 Equity Curve", "📊 Return Rate Changes", "📅 Daily Returns"])
+
+with chart_tab1:
+    st.markdown("#### Total Asset Return Curve (总余额资产收益曲线)")
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+    st.line_chart(equity_series.rename("Portfolio Value (USD)"), height=400)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with chart_tab2:
+    st.markdown("#### Rate of Return Changes (收益率变化)")
+    return_rate_curve = calculate_return_rate_curve(equity_series)
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+    st.line_chart(return_rate_curve.rename("Return Rate (%)"), height=400)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with chart_tab3:
+    st.markdown("#### Daily Returns Bar Chart (日收益曲线)")
+    daily_returns = calculate_daily_returns(equity_series) * 100
+    recent_returns = daily_returns.tail(30)
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+    st.bar_chart(recent_returns.rename("Daily Return (%)"), height=400)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("### 📋 Comprehensive Performance Metrics")
+metrics = get_performance_metrics(equity_series)
+
+metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+with metric_col1:
+    st.metric("Total Return", f"{metrics['total_return']:.2f}%")
+    st.metric("Win Rate", f"{metrics['win_rate']:.1f}%")
+
+with metric_col2:
+    st.metric("Annualized Return", f"{metrics['annualized_return']:.2f}%")
+    st.metric("Avg Daily Return", f"{metrics['avg_daily_return']:.3f}%")
+
+with metric_col3:
+    st.metric("Volatility", f"{metrics['volatility']:.2f}%")
+    st.metric("Avg Monthly Return", f"{metrics['avg_monthly_return']:.2f}%")
+
+with metric_col4:
+    st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2f}%")
+    st.metric("Sharpe Ratio", f"{metrics['sharpe_ratio']:.2f}")
 
 ###############################################################################
 #  Investor table
