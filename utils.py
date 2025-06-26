@@ -1,9 +1,10 @@
-import os, json, time, hashlib, pathlib
+import os, json, time, hashlib, pathlib, asyncio
 from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 from binance.client import Client
+from binance import AsyncClient
 
 DATA_DIR = pathlib.Path(__file__).parent / "data"
 INV_FILE = DATA_DIR / "investors.json"
@@ -145,3 +146,107 @@ def window_return(equity: pd.Series, days: int) -> float:
     if len(equity) < days + 1:
         return np.nan
     return equity.iloc[-1] / equity.iloc[-days - 1] - 1.0
+
+###############################################################################
+#  Async Binance helpers
+###############################################################################
+async def make_async_client(key: str, secret: str) -> AsyncClient:
+    return await AsyncClient.create(api_key=key, api_secret=secret, tld="com", testnet=False)
+
+async def _get_usd_price_async(client: AsyncClient, symbol: str) -> float:
+    """Return USD(T) price for any asset (e.g. BTC)."""
+    if symbol.upper() == "USDT":
+        return 1.0
+    pair = f"{symbol.upper()}USDT"
+    try:
+        ticker = await client.get_symbol_ticker(symbol=pair)
+        return float(ticker["price"])
+    except Exception:
+        return 0.0
+
+async def account_value_usd_async(client: AsyncClient) -> float:
+    """Spot account total estimated USD value."""
+    account_info = await client.get_account()
+    token_balances = account_info["balances"]
+    total = 0.0
+    for b in token_balances:
+        free = float(b["free"])
+        locked = float(b["locked"])
+        if free + locked == 0:
+            continue
+        price = await _get_usd_price_async(client, b["asset"])
+        total += (free + locked) * price
+    await client.close_connection()
+    return total
+
+def get_account_balance_sync(api_key: str, api_secret: str) -> float:
+    """Synchronous wrapper for async Binance API calls."""
+    async def _get_balance():
+        client = await make_async_client(api_key, api_secret)
+        return await account_value_usd_async(client)
+    
+    try:
+        return asyncio.run(_get_balance())
+    except Exception as e:
+        raise e
+
+###############################################################################
+###############################################################################
+def calculate_daily_returns(equity: pd.Series) -> pd.Series:
+    """Calculate daily returns from equity curve."""
+    return equity.pct_change().dropna()
+
+def calculate_monthly_returns(equity: pd.Series) -> pd.Series:
+    """Calculate monthly returns from equity curve."""
+    monthly_equity = equity.resample('M').last()
+    return monthly_equity.pct_change().dropna()
+
+def calculate_return_rate_curve(equity: pd.Series) -> pd.Series:
+    """Calculate cumulative return rate curve."""
+    initial_value = equity.iloc[0]
+    return (equity / initial_value - 1) * 100
+
+def get_performance_metrics(equity: pd.Series) -> dict:
+    """Calculate comprehensive performance metrics."""
+    daily_returns = calculate_daily_returns(equity)
+    monthly_returns = calculate_monthly_returns(equity)
+    
+    return {
+        "total_return": (equity.iloc[-1] / equity.iloc[0] - 1) * 100,
+        "annualized_return": ((equity.iloc[-1] / equity.iloc[0]) ** (365 / len(equity)) - 1) * 100,
+        "volatility": daily_returns.std() * np.sqrt(252) * 100,
+        "max_drawdown": max_drawdown(equity) * 100,
+        "sharpe_ratio": sharpe_ratio(equity),
+        "win_rate": (daily_returns > 0).mean() * 100,
+        "avg_daily_return": daily_returns.mean() * 100,
+        "avg_monthly_return": monthly_returns.mean() * 100
+    }
+
+def calculate_rolling_metrics(equity: pd.Series, window: int = 30) -> dict:
+    """Calculate rolling performance metrics for curve visualization."""
+    daily_returns = calculate_daily_returns(equity)
+    
+    rolling_volatility = daily_returns.rolling(window=window).std() * np.sqrt(252) * 100
+    
+    rolling_sharpe = daily_returns.rolling(window=window).mean() / daily_returns.rolling(window=window).std() * np.sqrt(252)
+    
+    rolling_max = equity.rolling(window=window, min_periods=1).max()
+    rolling_drawdown = (equity - rolling_max) / rolling_max * 100
+    
+    rolling_win_rate = daily_returns.rolling(window=window).apply(lambda x: (x > 0).mean()) * 100
+    
+    rolling_returns = equity.pct_change(periods=window).rolling(window=1).mean() * (252/window) * 100
+    
+    return {
+        "rolling_volatility": rolling_volatility.dropna(),
+        "rolling_sharpe": rolling_sharpe.dropna(),
+        "rolling_drawdown": rolling_drawdown.dropna(),
+        "rolling_win_rate": rolling_win_rate.dropna(),
+        "rolling_returns": rolling_returns.dropna()
+    }
+
+def calculate_cumulative_drawdown(equity: pd.Series) -> pd.Series:
+    """Calculate cumulative drawdown curve."""
+    cummax = equity.cummax()
+    drawdown = (equity - cummax) / cummax * 100
+    return drawdown
