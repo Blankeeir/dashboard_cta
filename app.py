@@ -279,9 +279,10 @@ else:
     scaled_history = history_df["balance"]
     today_balance = history_df["balance"].iloc[-1] if not history_df.empty else 10000
 
+today = pd.Timestamp.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 today_row = pd.Series(
     today_balance,
-    index=[pd.Timestamp.utcnow().normalize().tz_localize(None)]
+    index=[today.tz_localize(None)]
 )
 equity_series = scaled_history.copy()
 equity_series = equity_series.combine_first(today_row).sort_index()
