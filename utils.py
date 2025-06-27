@@ -1,14 +1,25 @@
 import os, json, time, hashlib, pathlib, asyncio
+import decimal
+import hmac
+import urllib.parse
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+import requests
 from binance.client import Client
 from binance import AsyncClient
+
+decimal.getcontext().prec = 18
 
 DATA_DIR = pathlib.Path(__file__).parent / "data"
 INV_FILE = DATA_DIR / "investors.json"
 HIST_FILE = DATA_DIR / "history.csv"
+
+FAPI_BASE = "https://fapi.binance.com"
+PAPI_BASE = "https://papi.binance.com"
+SAPI_BASE = "https://api.binance.com"
 
 ###############################################################################
 #  Persistent helpers
@@ -25,6 +36,23 @@ def load_investors() -> list[dict]:
 def save_investors(investors: list[dict]) -> None:
     _ensure_data_dir()
     INV_FILE.write_text(json.dumps(investors, indent=2))
+
+def _timestamp() -> int:
+    return int(time.time() * 1000)
+
+def _sign(params: Dict[str, str], secret: str) -> str:
+    query = urllib.parse.urlencode(params, True)
+    sig = hmac.new(secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+    return f"{query}&signature={sig}"
+
+def _get(url: str, api_key: str):
+    r = requests.get(url, headers={"X-MBX-APIKEY": api_key}, timeout=15)
+    if r.status_code != 200:
+        raise RuntimeError(f"Binance API error {r.status_code}: {r.text}")
+    return r.json()
+
+def _sum_dec(items, field):
+    return sum(decimal.Decimal(x[field]) for x in items)
 
 ###############################################################################
 ###############################################################################
@@ -179,14 +207,75 @@ async def account_value_usd_async(client: AsyncClient) -> float:
     await client.close_connection()
     return total
 
-def get_account_balance_sync(api_key: str, api_secret: str) -> float:
-    """Synchronous wrapper for async Binance API calls."""
-    async def _get_balance():
-        client = await make_async_client(api_key, api_secret)
-        return await account_value_usd_async(client)
-    
+def papi_account(api_key: str, api_secret: str):
+    qs = _sign({"timestamp": _timestamp()}, api_secret)
+    url = f"{PAPI_BASE}/papi/v1/um/account?{qs}"
+    return _get(url, api_key)
+
+def papi_income(api_key: str, api_secret: str, days: int) -> decimal.Decimal:
+    since = int((datetime.utcnow() - timedelta(days=days)).timestamp() * 1000)
+    params = {
+        "incomeType": "REALIZED_PNL",
+        "startTime": since,
+        "limit": 1000,
+        "timestamp": _timestamp(),
+    }
+    url = f"{PAPI_BASE}/papi/v1/um/income?{_sign(params, api_secret)}"
+    data = _get(url, api_key)
+    return sum(decimal.Decimal(row["income"]) for row in data)
+
+def fapi_account(api_key: str, api_secret: str):
+    qs = _sign({"timestamp": _timestamp()}, api_secret)
+    url = f"{FAPI_BASE}/fapi/v2/account?{qs}"
+    return _get(url, api_key)
+
+def fapi_income(api_key: str, api_secret: str, days: int) -> decimal.Decimal:
+    since = int((datetime.utcnow() - timedelta(days=days)).timestamp() * 1000)
+    params = {
+        "incomeType": "REALIZED_PNL",
+        "startTime": since,
+        "limit": 1000,
+        "timestamp": _timestamp(),
+    }
+    url = f"{FAPI_BASE}/fapi/v1/income?{_sign(params, api_secret)}"
+    data = _get(url, api_key)
+    return sum(decimal.Decimal(row["income"]) for row in data)
+
+def query_usdc(api_key: str, api_secret: str, days: int):
+    params = {"timestamp": _timestamp()}
+    qs = _sign(params, api_secret)
+    url = f"{SAPI_BASE}/sapi/v1/margin/account?{qs}"
+    data = _get(url, api_key)
+
+    usdc_row = next((a for a in data["userAssets"] if a["asset"] == "USDC"), None)
+    if not usdc_row:
+        return decimal.Decimal("0")
+
+    return decimal.Decimal(usdc_row["netAsset"])
+
+def query_pnl(api_key: str, api_secret: str, days: int):
     try:
-        return asyncio.run(_get_balance())
+        acct = papi_account(api_key, api_secret)
+        wallet = _sum_dec(acct["assets"], "crossWalletBalance")
+        unreal = _sum_dec(acct["assets"], "crossUnPnl")
+        realised = papi_income(api_key, api_secret, days)
+        return wallet, unreal, realised
+    except RuntimeError as e:
+        if not any(code in str(e) for code in ("-2015", "-4047")):
+            raise
+
+    acct = fapi_account(api_key, api_secret)
+    wallet = decimal.Decimal(acct["totalWalletBalance"])
+    unreal = decimal.Decimal(acct["totalUnrealizedProfit"])
+    realised = fapi_income(api_key, api_secret, days)
+    return wallet, unreal, realised
+
+def get_account_balance_sync(api_key: str, api_secret: str) -> float:
+    try:
+        usdc = query_usdc(api_key, api_secret, 90)
+        wallet, unreal, realised = query_pnl(api_key, api_secret, 90)
+        total_balance = float(wallet + unreal + usdc)
+        return total_balance
     except Exception as e:
         raise e
 
