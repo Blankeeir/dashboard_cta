@@ -321,8 +321,12 @@ with chart_tab3:
     st.markdown("#### Daily Returns Bar Chart (日收益曲线)")
     daily_returns = calculate_daily_returns(equity_series) * 100
     recent_returns = daily_returns.tail(30)
+    
+    recent_returns_formatted = recent_returns.copy()
+    recent_returns_formatted.index = recent_returns_formatted.index.strftime('%Y-%m-%d')
+    
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.bar_chart(recent_returns.rename("Daily Return (%)"), height=400)
+    st.bar_chart(recent_returns_formatted.rename("Daily Return (%)"), height=400)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with chart_tab4:
