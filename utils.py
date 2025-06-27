@@ -58,7 +58,8 @@ def _sum_dec(items, field):
 ###############################################################################
 def _create_history():
     start = datetime.utcnow() - timedelta(days=547)
-    dates = pd.date_range(start=start, end=datetime.utcnow(), freq="D")
+    end = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    dates = pd.date_range(start=start, end=end, freq="D")
     
     equity = np.full(len(dates), 10_000.0)
     
@@ -113,20 +114,29 @@ def _create_history():
 def load_history() -> pd.DataFrame:
     if not HIST_FILE.exists():
         _create_history()
-    # History CSV may use commas or tabs as separators depending on how it was
-    # generated.  Use a regex separator via the Python engine so either format
-    # loads correctly.
+    
     df = pd.read_csv(HIST_FILE, sep=r"[,\t]", engine="python")
-
-    # Drop any stray header rows or bad data then parse types
     df = df[df["date"] != "date"]
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["balance"] = pd.to_numeric(df["balance"], errors="coerce")
-
-    # Remove rows with invalid dates or balance values and index by date
     df = df.dropna(subset=["date", "balance"]).set_index("date")
-
-    return df.sort_index()
+    df = df.sort_index()
+    
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    if not df.empty:
+        last_date = df.index[-1].replace(tzinfo=None) if hasattr(df.index[-1], 'tz') and df.index[-1].tz else df.index[-1]
+        gap_days = (today - last_date).days
+        
+        if gap_days > 1:
+            _create_history()
+            df = pd.read_csv(HIST_FILE, sep=r"[,\t]", engine="python")
+            df = df[df["date"] != "date"]
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+            df["balance"] = pd.to_numeric(df["balance"], errors="coerce")
+            df = df.dropna(subset=["date", "balance"]).set_index("date")
+            df = df.sort_index()
+    
+    return df
 
 ###############################################################################
 #  Binance helpers
