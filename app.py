@@ -10,8 +10,8 @@ from utils import (
     max_drawdown, sharpe_ratio, window_return,
     get_account_balance_sync, calculate_daily_returns,
     calculate_monthly_returns, calculate_return_rate_curve,
-    get_performance_metrics, calculate_rolling_metrics,
-    calculate_cumulative_drawdown
+    calculate_daily_return_changes, get_performance_metrics, 
+    calculate_rolling_metrics, calculate_cumulative_drawdown
 )
 
 ###############################################################################
@@ -271,21 +271,43 @@ with aum_col2:
 ###############################################################################
 st.markdown("## 📈 Performance Analytics")
 
-if total_aum > 0:
-    scale_factor = total_aum / history_df["balance"].iloc[-1] if not history_df.empty else 1.0
-    scaled_history = history_df["balance"] * scale_factor
-    today_balance = total_aum
-else:
-    scaled_history = history_df["balance"]
-    today_balance = history_df["balance"].iloc[-1] if not history_df.empty else 10000
+realLP1_investor = next((inv for inv in investors if inv["name"] == "RealLP1"), None)
+realLP1_balance = realLP1_investor["balance"] if realLP1_investor else 0.0
 
-today = pd.Timestamp.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-today_row = pd.Series(
-    today_balance,
-    index=[today.tz_localize(None)]
-)
-equity_series = scaled_history.copy()
-equity_series = equity_series.combine_first(today_row).sort_index()
+freeze_date = pd.Timestamp('2025-06-29').replace(hour=0, minute=0, second=0, microsecond=0).tz_localize(None)
+today = pd.Timestamp.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).tz_localize(None)
+
+historical_data = history_df[history_df.index < freeze_date]
+
+if len(historical_data) > 0:
+    preserved_history = historical_data["balance"]
+    
+    if today >= freeze_date:
+        if realLP1_balance > 0:
+            last_historical_balance = preserved_history.iloc[-1]
+            realLP1_ratio = realLP1_balance / last_historical_balance if last_historical_balance > 0 else 1.0
+            total_virtual_scaled = total_virtual * realLP1_ratio
+            today_balance = realLP1_balance + total_virtual_scaled
+        else:
+            today_balance = preserved_history.iloc[-1]
+        
+        today_row = pd.Series(today_balance, index=[today.tz_localize(None)])
+        equity_series = preserved_history.copy()
+        equity_series = equity_series.combine_first(today_row).sort_index()
+    else:
+        equity_series = preserved_history
+else:
+    if total_aum > 0:
+        scale_factor = total_aum / history_df["balance"].iloc[-1] if not history_df.empty else 1.0
+        scaled_history = history_df["balance"] * scale_factor
+        today_balance = total_aum
+    else:
+        scaled_history = history_df["balance"]
+        today_balance = history_df["balance"].iloc[-1] if not history_df.empty else 10000
+    
+    today_row = pd.Series(today_balance, index=[today.tz_localize(None)])
+    equity_series = scaled_history.copy()
+    equity_series = equity_series.combine_first(today_row).sort_index()
 
 # Returns
 periods = {"30 d": 30, "90 d": 90, "180 d": 180, "Overall": len(equity_series) - 1}
@@ -313,9 +335,9 @@ with chart_tab1:
 
 with chart_tab2:
     st.markdown("#### Rate of Return Changes (收益率变化)")
-    return_rate_curve = calculate_return_rate_curve(equity_series)
+    return_rate_curve = calculate_daily_return_changes(equity_series)
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.line_chart(return_rate_curve.rename("Return Rate (%)"), height=400)
+    st.line_chart(return_rate_curve.rename("Daily Return Change (%)"), height=400)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with chart_tab3:

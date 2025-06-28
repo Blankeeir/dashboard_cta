@@ -127,7 +127,7 @@ def load_history() -> pd.DataFrame:
         last_date = df.index[-1].replace(tzinfo=None) if hasattr(df.index[-1], 'tz') and df.index[-1].tz else df.index[-1]
         gap_days = (today - last_date).days
         
-        if gap_days > 1:
+        if gap_days > 0:
             _create_history()
             df = pd.read_csv(HIST_FILE, sep=r"[,\t]", engine="python")
             df = df[df["date"] != "date"]
@@ -304,6 +304,11 @@ def calculate_return_rate_curve(equity: pd.Series) -> pd.Series:
     """Calculate cumulative return rate curve."""
     initial_value = equity.iloc[0]
     return (equity / initial_value - 1) * 100
+
+def calculate_daily_return_changes(equity: pd.Series) -> pd.Series:
+    """Calculate daily return changes (not cumulative)."""
+    daily_returns = calculate_daily_returns(equity) * 100
+    return daily_returns
 
 def get_performance_metrics(equity: pd.Series) -> dict:
     """Calculate comprehensive performance metrics."""
